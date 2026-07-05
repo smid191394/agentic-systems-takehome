@@ -13,7 +13,7 @@ exercise the config-sweep/report mechanics before a real client exists to plug
 in. Swapping in a real BypassClassifierClient later only means adding entries
 to CONFIGS; that is what would make temperature matter.
 
-Run: uv run python -m evals.run_bypass_eval
+Run: uv run -m evals.run_bypass_eval
 """
 
 import json
