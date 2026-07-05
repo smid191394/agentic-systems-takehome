@@ -40,10 +40,6 @@ def pattern_hit(raw_message: str) -> bool:
     return any(pattern.lower() in lowered for pattern in BYPASS_PATTERNS)
 
 
-class BypassClassifierError(Exception):
-    """Raised when Layer B fails or returns unparsable output."""
-
-
 class BypassClassifierClient(Protocol):
     def classify(self, raw_message: str) -> BypassLLMResult: ...
 
@@ -102,7 +98,11 @@ class BypassEvaluator:
 
         try:
             result = self._client.classify(raw_message)
-        except BypassClassifierError as exc:
+        except Exception as exc:
+            # Broad on purpose: this is the fail-closed security boundary. Any
+            # classifier failure (timeout, malformed output, bug) must fail
+            # closed here rather than propagate into a 500 that skips
+            # PolicyEngine's decision entirely.
             return BypassAssessment(pattern_hit=False, llm_called=True, llm_error=str(exc))
 
         return BypassAssessment(pattern_hit=False, llm_called=True, llm=result)
