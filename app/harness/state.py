@@ -11,6 +11,7 @@ from app.schemas.domain import BypassAssessment, LookupCatalogOutput, PlannerOut
 class RunState(BaseModel):
     run_id: str
     approval_status: Literal["PENDING", "APPROVED", "REJECTED"] = "PENDING"
+    action: Literal["CREATE_DRAFT_PO", "NEED_HUMAN_APPROVAL", "ASK_CLARIFICATION", "REJECT"] | None = None
     department: str
     planner_output: PlannerOutput | None = None
     catalog: LookupCatalogOutput | None = None

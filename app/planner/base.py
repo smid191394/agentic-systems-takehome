@@ -1,4 +1,6 @@
-"""Planner Protocol — lets the harness swap RuleBasedPlanner <-> LLMPlanner freely."""
+"""Planner Protocol — a real LLM-backed planner could implement this and drop in
+without changing AgentHarness; the Protocol is what makes it swappable, not a
+pre-existing stub implementation."""
 
 from typing import Protocol
 

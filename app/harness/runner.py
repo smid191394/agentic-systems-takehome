@@ -118,8 +118,6 @@ class AgentHarness:
         )
 
         if evaluation.action in ("REJECT", "NEED_HUMAN_APPROVAL"):
-            if evaluation.action == "REJECT":
-                state.approval_status = "REJECTED"
             return self._finish(state, evaluation.action, evaluation.reasons)
 
         draft = self._tools.create_draft_po(
@@ -137,6 +135,10 @@ class AgentHarness:
         reasons: list[str],
         draft_po: DraftPO | None = None,
     ) -> AgentRunResponse:
+        state.action = action
+        if action == "REJECT":
+            state.approval_status = "REJECTED"
+
         decision = _build_decision(action, reasons)
         status = "AWAITING_APPROVAL" if action == "NEED_HUMAN_APPROVAL" else "COMPLETED"
         return AgentRunResponse(

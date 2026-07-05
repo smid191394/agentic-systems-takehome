@@ -7,10 +7,11 @@ attempts that don't contain a literal keyword. The classifier only ever emits
 a `suspicious` signal — PolicyEngine is the sole place that turns any of this
 into an action.
 
-Layer B is swappable the same way Planner is: RuleBasedBypassClassifier
-(default, deterministic soft-keyword heuristic) vs LLMBypassClassifier
-(placeholder for a future real LLM call), both behind the same
-`BypassClassifierClient` Protocol. Selected via `BYPASS=rule_based|llm`.
+Layer B is RuleBasedBypassClassifier: a deterministic soft-keyword heuristic
+behind the `BypassClassifierClient` Protocol. A real LLM-backed classifier
+could implement the same Protocol and drop in without changing PolicyEngine
+or ToolRegistry — the Protocol is what makes Layer B swappable, not a
+pre-existing stub.
 
 Fail-closed: any Layer B failure (no client configured, classifier raises) is
 treated the same as "could not verify" -> NEED_HUMAN_APPROVAL, never
@@ -82,16 +83,6 @@ class RuleBasedBypassClassifier:
                 confidence=0.7,
             )
         return BypassLLMResult(suspicious=False, reason="no bypass signal detected", confidence=0.9)
-
-
-class LLMBypassClassifier:
-    """Placeholder for a future real-LLM semantic classifier (P2/bonus) — mirrors LLMPlanner."""
-
-    def __init__(self, client: object | None = None) -> None:
-        self._client = client
-
-    def classify(self, raw_message: str) -> BypassLLMResult:
-        raise NotImplementedError("LLMBypassClassifier is a placeholder for a future extension")
 
 
 class BypassEvaluator:
