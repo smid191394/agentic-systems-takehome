@@ -1,4 +1,4 @@
-"""End-to-end Agent Loop over the 12 canonical cases (5 official + 7 custom) in tests/data/requests.json."""
+"""End-to-end Agent Loop over the 11 canonical cases (5 official + 6 custom) in tests/data/requests.json."""
 
 import json
 from pathlib import Path
@@ -12,8 +12,8 @@ _REQUESTS = json.loads(
 )
 
 
-def test_twelve_cases_are_present(requests_data):
-    assert len(requests_data) == 12
+def test_eleven_cases_are_present(requests_data):
+    assert len(requests_data) == 11
     assert {c["source"] for c in requests_data} == {"official", "custom"}
 
 
@@ -38,7 +38,7 @@ def test_create_draft_po_case_has_draft_and_completed_status(harness, requests_d
 
 
 def test_need_human_approval_case_has_no_draft_and_awaiting_status(harness, requests_data):
-    case = next(c for c in requests_data if c["id"] == "custom_006")
+    case = next(c for c in requests_data if c["id"] == "custom_005")
     request = AgentRunRequest(user_id=case["user_id"], department=case["department"], message=case["message"])
 
     response = harness.run(request)

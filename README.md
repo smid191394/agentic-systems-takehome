@@ -64,8 +64,11 @@ curl -X POST localhost:8000/agent/runs/{run_id}/approve \
 ## 測試與評估
 
 ```bash
-# 傳統 pytest：deterministic 正確性（wiring、fail-closed、邊界值、12 案例 E2E）
+# 傳統 pytest：deterministic 正確性（wiring、fail-closed、邊界值、11 案例 E2E）
 uv run pytest
+
+# Demo：跑過 tests/data/requests.json 的 11 個案例，印出每筆的 decision/reason/draft_po
+uv run scripts/demo.py
 
 # LLM-step 準確率報告：bypass 分類器 / planner 抽取的 accuracy/precision/recall/F1
 uv run -m evals.run_bypass_eval
@@ -81,5 +84,6 @@ app/            # harness / planner / policy / tools / schemas（見 ARCHITECTUR
 fixtures/       # catalog.json / policies.json / budgets.json（題目提供)
 tests/          # pytest：正確性測試
 evals/          # LLM-step 準確率評估（非 pytest）
+scripts/        # demo.py — 跑 11 個案例並印出結果
 docs/           # ARCHITECTURE.md、AI_USAGE.md、原始題目規格
 ```

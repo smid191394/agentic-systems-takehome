@@ -38,7 +38,7 @@ def test_unknown_department_returns_200_not_422(client: TestClient):
     response = client.post(
         "/agent/run",
         json={
-            "user_id": "u_custom_007",
+            "user_id": "u_custom_006",
             "department": "sales",
             "message": "請幫業務部採購 2 個 Figma Enterprise Seat。",
         },

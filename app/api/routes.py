@@ -17,7 +17,9 @@ router = APIRouter()
 
 
 @lru_cache
-def _build_harness() -> AgentHarness:
+def build_harness() -> AgentHarness:
+    """Wires the harness stack. Also reused by scripts/demo.py so the demo runs against
+    the exact same construction as the live API, not a hand-rolled copy."""
     settings = get_settings()
     fixtures = load_fixtures(settings.fixtures_dir)
 
@@ -30,7 +32,7 @@ def _build_harness() -> AgentHarness:
 
 
 def get_harness() -> AgentHarness:
-    return _build_harness()
+    return build_harness()
 
 
 @router.post("/agent/run", response_model=AgentRunResponse)
