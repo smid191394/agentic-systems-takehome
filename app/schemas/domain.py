@@ -29,7 +29,6 @@ class DepartmentBudget(BaseModel):
 
 class PlannerOutput(BaseModel):
     department: str
-    raw_message: str
     item_query: str | None = None
     quantity: int | None = None
     budget_cap_usd: float | None = None
@@ -63,8 +62,16 @@ class BypassAssessment(BaseModel):
     llm_error: str | None = None
 
 
-class PolicyEvaluation(BaseModel):
-    action: Literal["CREATE_DRAFT_PO", "NEED_HUMAN_APPROVAL", "REJECT"]
+class BypassEvaluation(BaseModel):
+    """Output of the bypass gate (harness step 2). `action="PASS"` means the
+    message clears both layers and the run should continue to the Planner."""
+
+    action: Literal["REJECT", "NEED_HUMAN_APPROVAL", "PASS"]
     reasons: list[str] = Field(default_factory=list)
-    bypass: BypassAssessment
+    assessment: BypassAssessment
+
+
+class PolicyEvaluation(BaseModel):
+    action: Literal["CREATE_DRAFT_PO", "NEED_HUMAN_APPROVAL"]
+    reasons: list[str] = Field(default_factory=list)
     estimated_total: float | None = None

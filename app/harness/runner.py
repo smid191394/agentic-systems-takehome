@@ -1,20 +1,25 @@
-"""AgentHarness — the fixed 8-step Agent Loop.
+"""AgentHarness — the fixed 9-step Agent Loop.
 
     1. init RunState
-    2. Planner.parse -> PlannerOutput
-    3. harness validation (missing item/quantity -> ASK; qty<=0 -> REJECT)
-    4. lookup_catalog -> found / not_found / ambiguous (not_found/ambiguous -> ASK)
-    5. check_policy (unconditional; internally: bypass layers, then category/
-       amount/budget rules)
-    6. REJECT / NEED_HUMAN_APPROVAL -> return early
-    7. create_draft_po
-    8. build + schema-validate AgentRunResponse
+    2. check_bypass (unconditional; two layers: pattern, then semantic
+       classifier) -> REJECT / NEED_HUMAN_APPROVAL -> return early, before the
+       Planner ever sees the message
+    3. Planner.parse -> PlannerOutput
+    4. harness validation (missing item/quantity -> ASK; qty<=0 -> REJECT)
+    5. lookup_catalog -> found / not_found / ambiguous (not_found/ambiguous -> ASK)
+    6. check_policy (unconditional; category/amount/budget rules — bypass
+       already resolved in step 2)
+    7. NEED_HUMAN_APPROVAL -> return early
+    8. create_draft_po
+    9. build + schema-validate AgentRunResponse
 
 The Planner never chooses which tool runs next or what the final action is —
-step order is fixed by this class, and only PolicyEngine (step 5) produces
-REJECT/NEED_HUMAN_APPROVAL/CREATE_DRAFT_PO. This is the Approval Boundary: even
-a compromised/malicious planner output cannot skip check_policy or reach
-create_draft_po without passing it.
+step order is fixed by this class, and only BypassGate (step 2) / PolicyEngine
+(step 6) produce REJECT/NEED_HUMAN_APPROVAL/CREATE_DRAFT_PO. This is the
+Approval Boundary: even a compromised/malicious planner output cannot skip
+check_bypass/check_policy or reach create_draft_po without passing them.
+Putting the bypass gate first means an obviously dangerous message is rejected
+before spending any Planner/catalog/policy work on it.
 """
 
 import uuid
@@ -87,6 +92,10 @@ class AgentHarness:
         state = RunState(run_id=str(uuid.uuid4()), department=request.department)
         self._runs[state.run_id] = state
 
+        bypass_evaluation = self._tools.check_bypass(state, raw_message=request.message)
+        if bypass_evaluation.action != "PASS":
+            return self._finish(state, bypass_evaluation.action, bypass_evaluation.reasons)
+
         planner_output = self._planner.parse(request.department, request.message)
         state.planner_output = planner_output
 
@@ -98,7 +107,7 @@ class AgentHarness:
             return self._finish(state, "REJECT", ["invalid_quantity"])
 
         catalog_result = self._tools.lookup_catalog(
-            state, item_query=planner_output.item_query, raw_message=planner_output.raw_message
+            state, item_query=planner_output.item_query, raw_message=request.message
         )
         state.catalog = catalog_result
 
@@ -111,13 +120,12 @@ class AgentHarness:
 
         evaluation = self._tools.check_policy(
             state,
-            raw_message=planner_output.raw_message,
             department=request.department,
             item=item,
             quantity=planner_output.quantity,
         )
 
-        if evaluation.action in ("REJECT", "NEED_HUMAN_APPROVAL"):
+        if evaluation.action == "NEED_HUMAN_APPROVAL":
             return self._finish(state, evaluation.action, evaluation.reasons)
 
         draft = self._tools.create_draft_po(

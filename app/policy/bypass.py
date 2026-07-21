@@ -4,12 +4,12 @@ Layer A (pattern) runs first and is cheap/deterministic: a hit short-circuits
 straight to REJECT without ever calling the classifier. Only when Layer A
 misses does Layer B (semantic classifier) run, to catch paraphrased bypass
 attempts that don't contain a literal keyword. The classifier only ever emits
-a `suspicious` signal — PolicyEngine is the sole place that turns any of this
+a `suspicious` signal — BypassGate is the sole place that turns any of this
 into an action.
 
 Layer B is RuleBasedBypassClassifier: a deterministic soft-keyword heuristic
 behind the `BypassClassifierClient` Protocol. A real LLM-backed classifier
-could implement the same Protocol and drop in without changing PolicyEngine
+could implement the same Protocol and drop in without changing BypassGate
 or ToolRegistry — the Protocol is what makes Layer B swappable, not a
 pre-existing stub.
 
@@ -20,7 +20,7 @@ auto-execute. This is a deliberate reversal of "fail open on error".
 
 from typing import Protocol
 
-from app.schemas.domain import BypassAssessment, BypassLLMResult
+from app.schemas.domain import BypassAssessment, BypassEvaluation, BypassLLMResult
 
 BYPASS_PATTERNS = [
     "忽略",
@@ -106,3 +106,38 @@ class BypassEvaluator:
             return BypassAssessment(pattern_hit=False, llm_called=True, llm_error=str(exc))
 
         return BypassAssessment(pattern_hit=False, llm_called=True, llm=result)
+
+
+class BypassGate:
+    """Harness step 2 (right after RunState init) — the sole place that turns a
+    BypassAssessment into an action. Runs before the Planner even sees the
+    message: a REJECT/NEED_HUMAN_APPROVAL verdict here short-circuits the run
+    without spending Planner/catalog/policy work on a message that's already
+    been decided.
+
+    `action="PASS"` means both layers cleared — the run should continue
+    normally into Planner.parse and the rest of the loop.
+    """
+
+    def __init__(self, evaluator: BypassEvaluator) -> None:
+        self._evaluator = evaluator
+
+    def check(self, raw_message: str) -> BypassEvaluation:
+        assessment = self._evaluator.evaluate(raw_message)
+
+        if assessment.pattern_hit:
+            return BypassEvaluation(
+                action="REJECT", reasons=["bypass_pattern_detected"], assessment=assessment
+            )
+
+        if assessment.llm is not None and assessment.llm.suspicious:
+            return BypassEvaluation(
+                action="NEED_HUMAN_APPROVAL", reasons=["bypass_llm_suspicious"], assessment=assessment
+            )
+
+        if assessment.llm is None and assessment.llm_error is not None:
+            return BypassEvaluation(
+                action="NEED_HUMAN_APPROVAL", reasons=["bypass_llm_unavailable"], assessment=assessment
+            )
+
+        return BypassEvaluation(action="PASS", reasons=[], assessment=assessment)

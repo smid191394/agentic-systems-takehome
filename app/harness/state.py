@@ -16,7 +16,6 @@ class RunState(BaseModel):
     planner_output: PlannerOutput | None = None
     catalog: LookupCatalogOutput | None = None
     bypass_assessment: BypassAssessment | None = None
-    policy_reasons: list[str] = Field(default_factory=list)
     draft_po: DraftPO | None = None
     trace: list[dict] = Field(default_factory=list)
     tool_calls: list[ToolCallRecord] = Field(default_factory=list)

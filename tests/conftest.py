@@ -8,7 +8,7 @@ import pytest
 from app.fixtures_loader import Fixtures, load_fixtures
 from app.harness.runner import AgentHarness
 from app.planner.rule_based import RuleBasedPlanner
-from app.policy.bypass import BypassEvaluator, RuleBasedBypassClassifier
+from app.policy.bypass import BypassEvaluator, BypassGate, RuleBasedBypassClassifier
 from app.policy.engine import PolicyEngine
 from app.tools.registry import ToolRegistry
 
@@ -22,14 +22,18 @@ def fixtures() -> Fixtures:
 
 
 @pytest.fixture
-def policy_engine(fixtures: Fixtures) -> PolicyEngine:
-    bypass_evaluator = BypassEvaluator(RuleBasedBypassClassifier())
-    return PolicyEngine(fixtures.policies, fixtures.budgets, bypass_evaluator)
+def bypass_gate() -> BypassGate:
+    return BypassGate(BypassEvaluator(RuleBasedBypassClassifier()))
 
 
 @pytest.fixture
-def tool_registry(fixtures: Fixtures, policy_engine: PolicyEngine) -> ToolRegistry:
-    return ToolRegistry(fixtures.catalog, policy_engine)
+def policy_engine(fixtures: Fixtures) -> PolicyEngine:
+    return PolicyEngine(fixtures.policies, fixtures.budgets)
+
+
+@pytest.fixture
+def tool_registry(fixtures: Fixtures, policy_engine: PolicyEngine, bypass_gate: BypassGate) -> ToolRegistry:
+    return ToolRegistry(fixtures.catalog, policy_engine, bypass_gate)
 
 
 @pytest.fixture

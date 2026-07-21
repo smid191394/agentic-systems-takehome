@@ -44,7 +44,6 @@ class RuleBasedPlanner:
     def parse(self, department: str, raw_message: str) -> PlannerOutput:
         return PlannerOutput(
             department=department,
-            raw_message=raw_message,
             item_query=self._extract_item_query(raw_message),
             quantity=self._extract_quantity(raw_message),
             budget_cap_usd=self._extract_budget_cap(raw_message),

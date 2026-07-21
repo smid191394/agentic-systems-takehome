@@ -5,18 +5,40 @@ tool raising an exception still shows up as an "error" ToolCallRecord.
 """
 
 from app.harness.state import RunState
+from app.policy.bypass import BypassGate
 from app.policy.engine import PolicyEngine
 from app.schemas.api import DraftPO
-from app.schemas.domain import CatalogItem, LookupCatalogOutput, PolicyEvaluation
+from app.schemas.domain import BypassEvaluation, CatalogItem, LookupCatalogOutput, PolicyEvaluation
+from app.tools import bypass_tool
 from app.tools import catalog as catalog_tool
 from app.tools import draft as draft_tool
 from app.tools import policy_tool
 
 
 class ToolRegistry:
-    def __init__(self, catalog_items: list[CatalogItem], policy_engine: PolicyEngine) -> None:
+    def __init__(
+        self,
+        catalog_items: list[CatalogItem],
+        policy_engine: PolicyEngine,
+        bypass_gate: BypassGate,
+    ) -> None:
         self._catalog_items = catalog_items
         self._policy_engine = policy_engine
+        self._bypass_gate = bypass_gate
+
+    def check_bypass(self, state: RunState, *, raw_message: str) -> BypassEvaluation:
+        try:
+            evaluation = bypass_tool.check_bypass(self._bypass_gate, raw_message=raw_message)
+        except Exception:
+            state.record_tool_call("check_bypass", "error")
+            raise
+        state.bypass_assessment = evaluation.assessment
+        state.record_tool_call(
+            "check_bypass",
+            "success",
+            {"action": evaluation.action, "reasons": evaluation.reasons},
+        )
+        return evaluation
 
     def lookup_catalog(self, state: RunState, *, item_query: str, raw_message: str) -> LookupCatalogOutput:
         try:
@@ -33,7 +55,6 @@ class ToolRegistry:
         self,
         state: RunState,
         *,
-        raw_message: str,
         department: str,
         item: CatalogItem,
         quantity: int,
@@ -41,7 +62,6 @@ class ToolRegistry:
         try:
             evaluation = policy_tool.check_policy(
                 self._policy_engine,
-                raw_message=raw_message,
                 department=department,
                 item=item,
                 quantity=quantity,
@@ -49,8 +69,6 @@ class ToolRegistry:
         except Exception:
             state.record_tool_call("check_policy", "error")
             raise
-        state.bypass_assessment = evaluation.bypass
-        state.policy_reasons = evaluation.reasons
         state.record_tool_call(
             "check_policy",
             "success",

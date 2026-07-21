@@ -8,7 +8,7 @@ from app.config import get_settings
 from app.fixtures_loader import load_fixtures
 from app.harness.runner import AgentHarness
 from app.planner.rule_based import RuleBasedPlanner
-from app.policy.bypass import BypassEvaluator, RuleBasedBypassClassifier
+from app.policy.bypass import BypassEvaluator, BypassGate, RuleBasedBypassClassifier
 from app.policy.engine import PolicyEngine
 from app.schemas.api import AgentRunRequest, AgentRunResponse, ApproveRequest, ApproveResponse
 from app.tools.registry import ToolRegistry
@@ -23,9 +23,9 @@ def build_harness() -> AgentHarness:
     settings = get_settings()
     fixtures = load_fixtures(settings.fixtures_dir)
 
-    bypass_evaluator = BypassEvaluator(RuleBasedBypassClassifier())
-    policy_engine = PolicyEngine(fixtures.policies, fixtures.budgets, bypass_evaluator)
-    tool_registry = ToolRegistry(fixtures.catalog, policy_engine)
+    bypass_gate = BypassGate(BypassEvaluator(RuleBasedBypassClassifier()))
+    policy_engine = PolicyEngine(fixtures.policies, fixtures.budgets)
+    tool_registry = ToolRegistry(fixtures.catalog, policy_engine, bypass_gate)
     planner = RuleBasedPlanner()
 
     return AgentHarness(planner, fixtures.catalog, tool_registry)

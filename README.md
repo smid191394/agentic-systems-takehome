@@ -47,6 +47,7 @@ curl -X POST localhost:8000/agent/run \
     "department": "marketing"
   },
   "tool_calls": [
+    {"tool": "check_bypass", "status": "success"},
     {"tool": "lookup_catalog", "status": "success"},
     {"tool": "check_policy", "status": "success"},
     {"tool": "create_draft_po", "status": "success"}

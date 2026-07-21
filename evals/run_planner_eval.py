@@ -41,7 +41,6 @@ class OraclePlanner:
         golden = self._answers[raw_message]
         return PlannerOutput(
             department=department,
-            raw_message=raw_message,
             item_query=raw_message if golden["expected_item_present"] else None,
             quantity=golden["expected_quantity"],
             budget_cap_usd=golden["expected_budget_cap_usd"],
